@@ -1,0 +1,193 @@
+{% extends 'home.html' %}
+
+{% block content %}
+{% if t == 's' %}
+  <div class="movie" style="border: 2px solid white; width: 60%; color: white; padding: 20px; border-radius: 10px; margin: auto;">
+    <center>
+      <h2>Sorry! This movie is not in our database.</h2>
+      <h2>Please check if you spelled it correctly.</h2>
+      <h2>Or try with another movie.</h2>
+    </center>
+  </div>
+{% else %}
+
+<style>
+  body {
+    background-color: #000000;
+    font-family: "Georgia", serif;
+    color: white;
+  }
+
+  h2, h6 {
+    text-transform: uppercase;
+  }
+
+  .movie-content {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .card {
+    width: 14rem;
+    border: 1px solid white;
+    background: rgba(24, 24, 24, 0.9);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 500px;  /* Uniform height for all cards */
+  }
+
+  .card img {
+    height: 360px;
+    width: 100%;
+    object-fit: cover;
+  }
+
+  .card-body {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-title {
+    color: white;
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  .poster {
+    border-radius: 15px;
+    border: 2px solid white;
+    box-shadow: 0 0 10px white;
+  }
+
+  #mcontent {
+    display: flex;
+    flex-wrap: nowrap;
+    background: rgba(24, 24, 24, 0.8);
+    padding: 20px;
+    border-radius: 15px;
+  }
+
+  @media only screen and (max-width: 650px) {
+    #mcontent {
+      display: block;
+    }
+    .poster-lg {
+      display: none;
+    }
+  }
+
+  @media only screen and (min-width: 651px) {
+    .poster-sm {
+      display: none;
+    }
+  }
+</style>
+
+<center><h2>{{ result.title }}</h2></center>
+<br/>
+
+<div id="mycontent">
+  <div id="mcontent">
+    <div class="poster-lg">
+      <img class="poster" height="400" width="250" src="{{ img_path }}">
+    </div>
+    <div class="poster-sm text-center">
+      <img class="poster" height="400" width="250" src="{{ img_path }}">
+    </div>
+
+    <div style="margin-left: 50px;">
+      <h6><strong style="color: #FFFFFF;">Title:</strong> <span style="color:rgb(242, 157, 157);">{{ result.title }}</span></h6>
+      <h6 style="max-width: 85%"><strong style="color: #FFFFFF;">Overview:</strong><br/><br/><span style="color:rgb(242, 157, 157);">&nbsp;&nbsp;&nbsp;&nbsp;{{ result.overview }}</span></h6>
+      <h6><strong style="color: #FFFFFF;">Rating:</strong> <span style="color:rgb(242, 157, 157)">{{ result.vote_average }}/10 ({{ vote_count }} votes)</span></h6>
+      <h6><strong style="color: #FFFFFF;">Genre:</strong> <span style="color: rgb(242, 157, 157)">{{ genres }}</span></h6>
+      <h6><strong style="color: #FFFFFF;">Release Date:</strong> <span style="color:rgb(242, 157, 157)">{{ release_date }}</span></h6>
+      <h6><strong style="color: #FFFFFF;">Runtime:</strong> <span style="color: rgb(242, 157, 157);">{{ runtime }}</span></h6>
+      <h6><strong style="color: #FFFFFF;">Status:</strong> <span style="color:rgb(242, 157, 157)">{{ status }}</span></h6>
+    </div>
+  </div>
+</div>
+
+{% if trailer_url %}
+<br/>
+<div style="text-align: center; margin-top: 40px;">
+  <h3 style="color: white; font-weight: bold; margin-bottom: 20px;">🎬 Official Trailer</h3>
+  <iframe width="80%" height="415"
+          style="border-radius: 20px; box-shadow: 0px 0px 20px white;"
+          src="{{ trailer_url }}"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+  </iframe>
+</div>
+{% endif %}
+
+<br/>
+
+<center>
+  {% if reviews %}
+    <h2>USER REVIEWS</h2>
+    <div class="col-md-12" style="margin: 0 auto; margin-top:25px;">
+      <table class="table table-bordered" style="color:white; background: rgba(24, 24, 24, 0.9);">
+        <thead>
+          <tr>
+            <th class="text-center" scope="col" style="width: 75%">Comments</th>
+            <th class="text-center" scope="col">Sentiments</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for review, info in reviews.items() %}
+            <tr style="background-color: #1c1c1c;">
+              <td>{{ info.review }}</td>
+              <td style="text-align: center;">
+                {{ info.sentiment }}
+                {% if info.sentiment == 'Good' %}
+                  😊
+                {% else %}
+                  😟
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="color:white;">
+      <h1>This movie is not released yet. Stay tuned!</h1>
+    </div>
+  {% endif %}
+</center>
+
+<br/>
+
+<div class="movie" style="color:white;">
+  <center><h3>RECOMMENDED MOVIES FOR YOU</h3></center>
+</div>
+
+<div class="movie-content">
+  {% for title, data in cards.items() %}
+    <a href="{{ url_for('recommend', movie=title) }}" style="text-decoration: none;">
+      <div class="card" title="{{ title }}">
+        <img class="card-img-top" src="{{ data.poster }}" alt="{{ title }}">
+        <div class="card-body">
+          <h5 class="card-title">{{ title|capitalize }}</h5>
+        </div>
+      </div>
+    </a>
+  {% endfor %}
+</div>
+
+{% endif %}
+{% endblock %}
+
+
+
+
+
