@@ -26,7 +26,7 @@ def create_sim():
     global data, sim
     if data is not None and sim is not None:
         return data, sim
-    data = pd.read_csv('main_data.csv')
+    data = pd.read_csv('main_data.csv', usecols=['movie_title', 'comb'])
     cv = CountVectorizer(max_features=5000)
     count_matrix = cv.fit_transform(data['comb'])
     sim = cosine_similarity(count_matrix).astype('float32')
