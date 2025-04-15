@@ -20,29 +20,29 @@ clf = pickle.load(open('nlp_model1.pkl', 'rb'))
 vectorizer = pickle.load(open('tranform1.pkl', 'rb'))
 
 # Global cache
-data, sim = None, None
+_data, _sim = None, None
 
 def create_sim():
-    global data, sim
-    if data is not None and sim is not None:
-        return data, sim
-    data = pd.read_csv('main_data.csv', usecols=['movie_title', 'comb'])
-    cv = CountVectorizer(max_features=5000)
-    count_matrix = cv.fit_transform(data['comb'])
-    sim = cosine_similarity(count_matrix).astype('float32')
-    return data, sim
+    global _data, _sim
+    if _data is None or _sim is None:
+        _data = pd.read_csv('main_data.csv', usecols=['movie_title', 'comb'])
+        cv = CountVectorizer(max_features=5000)
+        count_matrix = cv.fit_transform(_data['comb'])
+        _sim = cosine_similarity(count_matrix).astype('float32')
+    return _data, _sim
 
 def rcmd(m):
     m = m.lower()
-    global data, sim
     data, sim = create_sim()
-    if m not in data['movie_title'].unique():
+    if m not in data['movie_title'].str.lower().values:
         return 'Sorry! The movie you searched is not in our database. Please check the spelling or try with some other movies'
-    i = data.loc[data['movie_title'] == m].index[0]
-    lst = list(enumerate(sim[i]))
-    lst = sorted(lst, key=lambda x: x[1], reverse=True)
-    lst = lst[1:11]
-    return [data['movie_title'][x[0]] for x in lst]
+    
+    # Ensuring case-insensitive match
+    idx = data[data['movie_title'].str.lower() == m].index[0]
+    similarity_scores = list(enumerate(sim[idx]))
+    sorted_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)[1:11]
+    recommended_titles = [data.iloc[i[0]]['movie_title'] for i in sorted_scores]
+    return recommended_titles
 
 def ListOfGenres(genre_json):
     return ", ".join([g['name'] for g in genre_json]) if genre_json else "N/A"
