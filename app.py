@@ -1,36 +1,46 @@
 import numpy as np
 import pandas as pd
 from flask import Flask, render_template, request
+from sklearn.feature_extraction.text import CountVectorizer
 import pickle
 import requests
 import re
 from bs4 import BeautifulSoup
 from tmdbv3api import TMDb, Movie
+import faiss
 import os
 import time
 
 # TMDb API setup
 tmdb = TMDb()
-tmdb.api_key = '72d19966f145a12485b7033ed0526058'
+tmdb.api_key = '72d19966f145a12485b7033ed0526058'  # Replace with your TMDb API key
 
 # Load NLP model and vectorizer
 clf = pickle.load(open('nlp_model1.pkl', 'rb'))
 vectorizer = pickle.load(open('tranform1.pkl', 'rb'))
 
-# Load data and precomputed similarity matrix
-data = pd.read_csv('main_data.csv', usecols=['movie_title', 'comb'])
-with open('similarity67.pkl', 'rb') as f:
-    sim = pickle.load(f)
+# Load FAISS index and movie titles
+faiss_index = faiss.read_index("faiss_movie_index.index")
+with open("movie_titles.pkl", "rb") as f:
+    movie_titles = pickle.load(f)
 
-def rcmd(m):
-    m = m.lower()
-    if m not in data['movie_title'].unique():
+# Helper to recommend movies
+def rcmd(movie):
+    movie = movie.lower()
+    titles_lower = [title.lower() for title in movie_titles]
+    if movie not in titles_lower:
         return 'Sorry! The movie you searched is not in our database. Please check the spelling or try with some other movies'
-    i = data.loc[data['movie_title'] == m].index[0]
-    lst = list(enumerate(sim[i]))
-    lst = sorted(lst, key=lambda x: x[1], reverse=True)
-    lst = lst[1:11]
-    return [data['movie_title'][x[0]] for x in lst]
+
+    idx = titles_lower.index(movie)
+
+    # Vectorize and normalize the input
+    vector = vectorizer.transform([movie_titles[idx]]).toarray().astype("float32")
+    vector /= np.linalg.norm(vector, axis=1, keepdims=True)
+
+    D, I = faiss_index.search(vector, 11)
+    indices = I[0][1:]  # Exclude the movie itself
+
+    return [movie_titles[i] for i in indices]
 
 def ListOfGenres(genre_json):
     return ", ".join([g['name'] for g in genre_json]) if genre_json else "N/A"
@@ -47,7 +57,7 @@ def MinsToHours(duration):
     return f"{duration // 60} hours {duration % 60} minutes" if duration else "N/A"
 
 def get_suggestions():
-    return list(data['movie_title'].str.capitalize())
+    return list(map(str.capitalize, movie_titles))
 
 def clean_review(text):
     text = BeautifulSoup(text, "html.parser").get_text()
