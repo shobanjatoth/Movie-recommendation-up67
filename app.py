@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 from flask import Flask, render_template, request
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import requests
 import re
@@ -19,30 +17,20 @@ tmdb.api_key = '72d19966f145a12485b7033ed0526058'
 clf = pickle.load(open('nlp_model1.pkl', 'rb'))
 vectorizer = pickle.load(open('tranform1.pkl', 'rb'))
 
-# Global cache
-_data, _sim = None, None
-
-def create_sim():
-    global _data, _sim
-    if _data is None or _sim is None:
-        _data = pd.read_csv('main_data.csv', usecols=['movie_title', 'comb'])
-        cv = CountVectorizer(max_features=5000)
-        count_matrix = cv.fit_transform(_data['comb'])
-        _sim = cosine_similarity(count_matrix).astype('float32')
-    return _data, _sim
+# Load data and precomputed similarity matrix
+data = pd.read_csv('main_data.csv', usecols=['movie_title', 'comb'])
+with open('similarity67.pkl', 'rb') as f:
+    sim = pickle.load(f)
 
 def rcmd(m):
     m = m.lower()
-    data, sim = create_sim()
-    if m not in data['movie_title'].str.lower().values:
+    if m not in data['movie_title'].unique():
         return 'Sorry! The movie you searched is not in our database. Please check the spelling or try with some other movies'
-    
-    # Ensuring case-insensitive match
-    idx = data[data['movie_title'].str.lower() == m].index[0]
-    similarity_scores = list(enumerate(sim[idx]))
-    sorted_scores = sorted(similarity_scores, key=lambda x: x[1], reverse=True)[1:11]
-    recommended_titles = [data.iloc[i[0]]['movie_title'] for i in sorted_scores]
-    return recommended_titles
+    i = data.loc[data['movie_title'] == m].index[0]
+    lst = list(enumerate(sim[i]))
+    lst = sorted(lst, key=lambda x: x[1], reverse=True)
+    lst = lst[1:11]
+    return [data['movie_title'][x[0]] for x in lst]
 
 def ListOfGenres(genre_json):
     return ", ".join([g['name'] for g in genre_json]) if genre_json else "N/A"
@@ -59,7 +47,6 @@ def MinsToHours(duration):
     return f"{duration // 60} hours {duration % 60} minutes" if duration else "N/A"
 
 def get_suggestions():
-    data = pd.read_csv('main_data.csv')
     return list(data['movie_title'].str.capitalize())
 
 def clean_review(text):
